@@ -3,17 +3,20 @@ package oteltrace
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"fmt"
 
-	influxcommon "github.com/influxdata/influx-observability/common"
+	influxcommon "github.com/influxdata/influxdb-observability/common"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	semconv "go.opentelemetry.io/collector/semconv/v1.16.0"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
+	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -122,8 +125,9 @@ func (o *OtelTrace) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func (o *OtelTrace) handleSpan(metric []telegraf.Metric) error {
+func (o *OtelTrace) handleSpan(metric telegraf.Metric) error {
 	// Might just need to deal with the actual raw protos underneath? FUUUUU
+	// Can we move to using https://pkg.go.dev/go.opentelemetry.io/collector/consumer/pdata#NewSpan
 	span := &tracepb.Span{}
 
 	// traceID/spanID are in tags
@@ -131,10 +135,10 @@ func (o *OtelTrace) handleSpan(metric []telegraf.Metric) error {
 	tags := metric.TagList()
 	for _, tag := range tags {
 		if tag.Key == influxcommon.AttributeTraceID {
-			span.TraceId = tag.Value
+			span.TraceId = []byte(tag.Value)
 		}
 		if tag.Key == influxcommon.AttributeSpanID {
-			span.SpanId = tag.Value
+			span.SpanId = []byte(tag.Value)
 		}
 		// TODO: There are other things that can be configured to be span dimensions, but whatever``
 	}
@@ -144,25 +148,88 @@ func (o *OtelTrace) handleSpan(metric []telegraf.Metric) error {
 		if field.Key == influxcommon.AttributeTraceState {
 			// TODO: convert interface into the correct shiz
 			traceStateRaw := field.Value
+			traceState, ok := traceStateRaw.(string)
+			if !ok {
+				return fmt.Errorf("invalid type for span trace_state %v", traceStateRaw)
+			}
+			span.TraceState = traceState
 		}
 		if field.Key == influxcommon.AttributeParentSpanID {
 			parentSpanIDRaw := field.Value
+			parentSpanID, ok := parentSpanIDRaw.([]byte)
+			if !ok {
+				return fmt.Errorf("invalid type for parent_span_id %v", parentSpanIDRaw)
+			}
+			span.ParentSpanId = parentSpanID
 		}
 		if field.Key == influxcommon.AttributeSpanName {
-			attributeSpanNameRaw := field.Value
+			spanNameRaw := field.Value
+			spanName, ok := spanNameRaw.(string)
+			if !ok {
+				return fmt.Errorf("invalid type for span name %v", spanNameRaw)
+			}
+			span.Name = spanName
 		}
 		if field.Key == influxcommon.AttributeSpanKind {
-			attributeSpanKindRaw := field.Value
+			spanKindRaw := field.Value
+			spanKindStr, ok := field.Value.(string)
+			if !ok {
+				return fmt.Errorf("invalid type for span kind %v", spanKindRaw)
+			}
+			span.Kind = tracepb.Span_SpanKind(tracepb.Span_SpanKind_value[spanKindStr])
 		}
 		if field.Key == influxcommon.AttributeEndTimeUnixNano {
+			endTimeRaw := field.Value
+			endTime, ok := field.Value.(uint64)
+			if !ok {
+				return fmt.Errorf("invalid type for span end_time_unix_nano %v", endTimeRaw)
+			}
+			span.EndTimeUnixNano = endTime
 		}
-		if field.Key == influxcommon.AttributeDurationNano {
-		}
+		span.Status = &tracepb.Status{}
 		if field.Key == semconv.OtelStatusCode {
+			statusCodeRaw := field.Value
+			statusCodeStr, ok := statusCodeRaw.(string)
+			if !ok {
+				return fmt.Errorf("invalid type for status status_code %v", statusCodeRaw)
+			}
+			span.Status.Code = tracepb.Status_StatusCode(tracepb.Status_StatusCode_value[statusCodeStr])
 		}
 		if field.Key == semconv.OtelStatusDescription {
+			statusMessageRaw := field.Value
+			statusMessage, ok := statusMessageRaw.(string)
+			if !ok {
+				return fmt.Errorf("invalid type for status message %v", statusMessageRaw)
+			}
+			span.Status.Message = statusMessage
 		}
 		if field.Key == influxcommon.AttributeDroppedAttributesCount {
+			droppedAttrCountRaw := field.Value
+			droppedAttrCount, ok := droppedAttrCountRaw.(uint32)
+			if !ok {
+				return fmt.Errorf("invalid type for dropped attributes count %v", droppedAttrCountRaw)
+			}
+			span.DroppedAttributesCount = droppedAttrCount
+		}
+		if field.Key == influxcommon.AttributeAttributes {
+			attributesRaw := field.Value
+			attributesRawStr, ok := attributesRaw.(string)
+			if !ok {
+				return fmt.Errorf("invalid type for attributes %v", attributesRaw)
+			}
+			attributesField := make(map[string]any)
+			if err := json.Unmarshal([]byte(attributesRawStr), attributesField); err != nil {
+				return fmt.Errorf("failed to unmarshal attributes to map %w", err)
+			}
+			attributes := make([]*commonpb.KeyValue, 0)
+			for k, v := range attributesField {
+				kv := commonpb.KeyValue{
+					Key:   k,
+					Value: ConvertAnyValue(v),
+				}
+				attributes = append(attributes, &kv)
+			}
+			span.Attributes = attributes
 		}
 	}
 
@@ -180,4 +247,55 @@ func (o *OtelTrace) handleSpanLink(metric []telegraf.Metric) error {
 func init() {
 	// TODO
 	outputs.Add("oteltrace", func() telegraf.Output { return &OtelTrace{} })
+}
+
+func ConvertAnyValue(raw any) *commonpb.AnyValue {
+	av := &commonpb.AnyValue{}
+	switch v := raw.(type) {
+	case string:
+		av.Value = &commonpb.AnyValue_StringValue{
+			StringValue: v,
+		}
+	case bool:
+		av.Value = &commonpb.AnyValue_BoolValue{
+			BoolValue: v,
+		}
+	case int64:
+		av.Value = &commonpb.AnyValue_IntValue{
+			IntValue: v,
+		}
+	case float64:
+		av.Value = &commonpb.AnyValue_DoubleValue{
+			DoubleValue: v,
+		}
+	case []byte:
+		av.Value = &commonpb.AnyValue_BytesValue{
+			BytesValue: v,
+		}
+	case []any:
+		anyValueList := commonpb.ArrayValue{
+			Values: make([]*commonpb.AnyValue, 0),
+		}
+		for _, valRaw := range v {
+			anyValueList.Values = append(anyValueList.Values, ConvertAnyValue(valRaw))
+		}
+		av.Value = &commonpb.AnyValue_ArrayValue{
+			ArrayValue: &anyValueList,
+		}
+	case map[string]any:
+		anyValueKv := commonpb.KeyValueList{
+			Values: make([]*commonpb.KeyValue, 0),
+		}
+		for k, valRaw := range v {
+			kv := commonpb.KeyValue{
+				Key:   k,
+				Value: ConvertAnyValue(valRaw),
+			}
+			anyValueKv.Values = append(anyValueKv.Values, &kv)
+		}
+		av.Value = &commonpb.AnyValue_KvlistValue{
+			KvlistValue: &anyValueKv,
+		}
+	}
+	return av
 }
