@@ -1,8 +1,8 @@
 services:
   telegraf: 
     image: telegraf:1.28
-    volumes:
-      - ./telegraf/etc/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      # volumes:
+      #   - ./telegraf/etc/telegraf.conf:/etc/telegraf/telegraf.conf:ro
     ports:
       - '8125:8125/udp'
 
@@ -24,7 +24,7 @@ services:
     image: *tempoImage
     command: [ "-config.file=/etc/tempo.yaml" ]
     volumes:
-      - ../tempo/tempo.yaml:/etc/tempo.yaml
+      - ./tempo/tempo.yaml:/etc/tempo.yaml
       - ./tempo/data:/var/tempo
     ports:
       - "14268:14268"  # jaeger ingest
@@ -38,8 +38,8 @@ services:
 
   grafana:
     image: grafana/grafana:10.4.2
-    volumes:
-      - ./grafana/config:/etc/grafana/
+      # volumes:
+      #   - ./grafana/config:/etc/grafana/
     environment:
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
