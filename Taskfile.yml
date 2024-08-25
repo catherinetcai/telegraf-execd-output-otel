@@ -1,12 +1,14 @@
 # https://taskfile.dev
 
-version: '3'
-
-vars:
-  GREETING: Hello, World!
+version: "3"
 
 tasks:
-  default:
+  deps:
+    status:
+      - mockery
     cmds:
-      - echo "{{.GREETING}}"
-    silent: true
+      - go install github.com/vektra/mockery/v2@v2.45.0
+
+  mocks:
+    cmds:
+      - mockery

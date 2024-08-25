@@ -39,7 +39,7 @@ func main() {
 	// create the shim. This is what will run your plugins.
 	shimLayer := shim.New()
 
-	if err := shimLayer.LoadConfig(args.configFile); err != nil {
+	if err := shimLayer.LoadConfig(&args.configFile); err != nil {
 		fmt.Fprintf(os.Stderr, "Err loading input: %s\n", err)
 		os.Exit(1)
 	}

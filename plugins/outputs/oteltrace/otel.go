@@ -1,6 +1,7 @@
 package oteltrace
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 
@@ -15,7 +16,11 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-var _ telegraf.Output = (*OtelTrace)(nil)
+var (
+	// Ensure the plugin conforms to the correct plugin interfaces
+	_ telegraf.Initializer = (*OtelTrace)(nil)
+	_ telegraf.Output      = (*OtelTrace)(nil)
+)
 
 //go:embed sample.conf
 var sampleConfig string
@@ -27,13 +32,14 @@ const (
 type OtelTrace struct {
 	Debug          bool   `toml:"debug"`
 	ServiceAddress string `toml:"service_address"`
-	// TODO: Verify if it works
-	// https://github.com/influxdata/telegraf/blob/master/docs/developers/LOGGING.md#plugin-logging
-	Log      telegraf.Logger `toml:"-"`
-	Exporter ptraceotlp.GRPCClient
+	Exporter       ptraceotlp.GRPCClient
 
 	// Private store to allow for teardown
 	clientConn *grpc.ClientConn
+
+	// TODO: Verify if it works
+	// https://github.com/influxdata/telegraf/blob/master/docs/developers/LOGGING.md#plugin-logging
+	Log telegraf.Logger `toml:"-"`
 }
 
 func (o *OtelTrace) Init() error {
@@ -133,7 +139,7 @@ func (o *OtelTrace) Write(metrics []telegraf.Metric) error {
 			for i := 0; i < spanCount; i++ {
 				currentSpan := scopeSpans.Spans().At(i)
 				if spanLink.SpanID().String() == currentSpan.SpanID().String() {
-					span = &currentSpan
+					span = currentSpan
 				}
 			}
 
@@ -157,6 +163,14 @@ func (o *OtelTrace) Write(metrics []telegraf.Metric) error {
 		// https://opentelemetry.io/docs/concepts/signals/traces/
 	}
 
+	for name, trace := range traceBatch {
+		o.Log.Debugf("sending trace: %s", name)
+		_, err := o.Exporter.Export(context.TODO(), ptraceotlp.NewExportRequestFromTraces((trace)))
+		if err != nil {
+			o.Log.Errorf("failed to export traces %s: %s", name, err)
+			return err
+		}
+	}
 	return nil
 }
 

@@ -1,0 +1,5 @@
+with-expecter: true
+packages:
+  go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp:
+    interfaces:
+      GRPCClient:
