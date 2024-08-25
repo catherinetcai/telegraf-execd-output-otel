@@ -10,29 +10,23 @@ import (
 	"go.opentelemetry.io/collector/pdata/ptrace"
 )
 
+// TODO: Returns the spanlink with the linked trace ID and span ID attached, but
+// this still has to be appended to the pre-existing span's links
 func (o *OtelTrace) handleSpanLink(metric telegraf.Metric) (ptrace.SpanLink, error) {
 	spanLink := ptrace.NewSpanLink()
 	tags := metric.TagList()
-	var traceID, spanID, linkedTraceID, linkedSpanID string
 
 	for _, tag := range tags {
-		if tag.Key == influxcommon.AttributeTraceID {
-			pTraceID := pcommon.TraceID(([]byte(tag.Value)))
-			spanLink.SetTraceID(pTraceID)
-			traceID = pTraceID.String()
-		}
-		if tag.Key == influxcommon.AttributeSpanID {
-			pSpanID := pcommon.SpanID([]byte(tag.Value))
-			spanLink.SetSpanID(pSpanID)
-			spanID = pSpanID.String()
-		}
+		// https://github.com/influxdata/influxdb-observability/blob/main/otel2influx/traces.go#L267
 		if tag.Key == influxcommon.AttributeLinkedTraceID {
 			pLinkedTraceID := pcommon.TraceID(([]byte(tag.Value)))
-			linkedTraceID = pLinkedTraceID.String()
+			spanLink.SetTraceID(pLinkedTraceID)
+			// linkedTraceID = pLinkedTraceID.String()
 		}
 		if tag.Key == influxcommon.AttributeLinkedSpanID {
 			pLinkedSpanID := pcommon.SpanID([]byte(tag.Value))
-			linkedSpanID = pLinkedSpanID.String()
+			spanLink.SetSpanID(pLinkedSpanID)
+			// linkedSpanID = pLinkedSpanID.String()
 		}
 	}
 

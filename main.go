@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	_ "github.com/catherinetcai/telegraf-execd-otel/plugins/outputs/oteltrace"
 	"github.com/influxdata/telegraf/plugins/common/shim"
 	flag "github.com/spf13/pflag"
 )

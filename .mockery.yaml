@@ -1,6 +1,0 @@
-with-expecter: true
-filename: "mock_{{.InterfaceName | snakecase}}.go"
-packages:
-  go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp:
-    interfaces:
-      GRPCClient:
