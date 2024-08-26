@@ -23,6 +23,7 @@ func (o *OtelTrace) handleSpan(metric telegraf.Metric) (ptrace.Span, error) {
 			span.SetTraceID(traceID)
 		}
 		if tag.Key == influxcommon.AttributeSpanID {
+			// TODO: This panics in tests
 			spanID := pcommon.SpanID([]byte(tag.Value))
 			span.SetSpanID(spanID)
 		}
@@ -93,11 +94,12 @@ func (o *OtelTrace) handleSpan(metric telegraf.Metric) (ptrace.Span, error) {
 		}
 		if field.Key == influxcommon.AttributeDroppedAttributesCount {
 			droppedAttrCountRaw := field.Value
-			droppedAttrCount, ok := droppedAttrCountRaw.(uint32)
+			droppedAttrCount, ok := droppedAttrCountRaw.(uint64)
 			if !ok {
 				return span, fmt.Errorf("invalid type for dropped attributes count %v", droppedAttrCountRaw)
 			}
-			span.SetDroppedAttributesCount(droppedAttrCount)
+			// influx wants uint64, traces want uint32 - go figure
+			span.SetDroppedAttributesCount(uint32(droppedAttrCount))
 		}
 		if field.Key == influxcommon.AttributeAttributes {
 			attributesRaw := field.Value

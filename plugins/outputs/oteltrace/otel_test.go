@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/catherinetcai/telegraf-execd-otel/plugins/outputs/oteltrace"
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/ptrace"
@@ -40,8 +41,14 @@ func TestOtelTrace(t *testing.T) {
 		// https://github.com/open-telemetry/opentelemetry-collector/blob/pdata/v1.13.0/pdata/ptrace/ptraceotlp/grpc_test.go#L41
 		ServiceAddress: "bufnet",
 	}
-	err := ot.Write(testutil.MockMetrics())
-	assert.NoError(t, err, "failed to write to OtelTrace")
+	assert.NoError(t, ot.Connect())
+	defer ot.Close()
+	// Handle empty metrics
+	assert.NoError(t, ot.Write(testutil.MockMetrics()))
+	// Handle non-empty metrics
+	assert.NoError(t, ot.Write([]telegraf.Metric{
+		generateTraceAsMetric(),
+	}))
 }
 
 // https://github.com/open-telemetry/opentelemetry-collector/blob/pdata/v1.13.0/pdata/ptrace/ptraceotlp/grpc_test.go#L93

@@ -1,10 +1,12 @@
 services:
-  telegraf: 
-    image: telegraf:1.28
-      # volumes:
-      #   - ./telegraf/etc/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+  telegraf:
+    image: "telegraf:1.28"
+    volumes:
+      - ./telegraf/etc/telegraf.conf:/etc/telegraf/telegraf.conf:ro
     ports:
-      - '8125:8125/udp'
+      - "44317:4317"
+      - "44318:4318"
+      - "8125:8125/udp"
 
   ####
   # https://github.com/grafana/tempo/blob/496b450e4424aa7dadf9493adf3afeee8bb057ff/example/docker-compose/local/docker-compose.yaml
@@ -22,22 +24,23 @@ services:
 
   tempo:
     image: *tempoImage
-    command: [ "-config.file=/etc/tempo.yaml" ]
+    command: ["-config.file=/etc/tempo.yaml"]
     volumes:
       - ./tempo/tempo.yaml:/etc/tempo.yaml
       - ./tempo/data:/var/tempo
     ports:
-      - "14268:14268"  # jaeger ingest
-      - "3200:3200"   # tempo
+      - "14268:14268" # jaeger ingest
+      - "3200:3200" # tempo
       - "9095:9095" # tempo grpc
-      - "4317:4317"  # otlp grpc
-      - "4318:4318"  # otlp http
-      - "9411:9411"   # zipkin
+      - "4317:4317" # otlp grpc
+      - "4318:4318" # otlp http
+      - "9411:9411" # zipkin
     depends_on:
       - init
 
   grafana:
-    image: grafana/grafana:10.4.2
+    image:
+      grafana/grafana:10.4.2
       # volumes:
       #   - ./grafana/config:/etc/grafana/
     environment:
@@ -56,4 +59,3 @@ services:
         #   ports:
         #     - '12345:12345'
         #   command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
-

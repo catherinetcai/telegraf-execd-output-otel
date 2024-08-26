@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/davecgh/go-spew/spew"
 	influxcommon "github.com/influxdata/influxdb-observability/common"
 	"github.com/influxdata/telegraf"
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -48,18 +49,20 @@ func (o *OtelTrace) handleSpanLink(metric telegraf.Metric) (ptrace.SpanLink, err
 				return spanLink, fmt.Errorf("invalid type for attributes %v", attributesRaw)
 			}
 			attributesField := make(map[string]any)
-			if err := json.Unmarshal([]byte(attributesRawStr), attributesField); err != nil {
+			if err := json.Unmarshal([]byte(attributesRawStr), &attributesField); err != nil {
 				return spanLink, fmt.Errorf("failed to unmarshal attributes to map %w", err)
 			}
 			spanLink.Attributes().FromRaw(attributesField)
 		}
 		if field.Key == influxcommon.AttributeDroppedAttributesCount {
 			droppedAttrCountRaw := field.Value
-			droppedAttrCount, ok := droppedAttrCountRaw.(uint32)
+			spew.Dump(droppedAttrCountRaw)
+			droppedAttrCount, ok := droppedAttrCountRaw.(uint64)
 			if !ok {
 				return spanLink, fmt.Errorf("invalid type for dropped attributes count %v", droppedAttrCountRaw)
 			}
-			spanLink.SetDroppedAttributesCount(droppedAttrCount)
+			// ptrace takes this as uint32, influx takes it as uint64
+			spanLink.SetDroppedAttributesCount(uint32(droppedAttrCount))
 		}
 	}
 

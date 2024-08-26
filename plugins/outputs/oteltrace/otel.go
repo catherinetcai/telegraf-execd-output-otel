@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 
+	"github.com/davecgh/go-spew/spew"
 	influxcommon "github.com/influxdata/influxdb-observability/common"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -62,7 +63,7 @@ func (o *OtelTrace) Connect() error {
 	)
 	if err != nil {
 		wrappedErr := fmt.Errorf("failed to create grpc client for %s - err: %w", o.ServiceAddress, err)
-		o.Log.Error(wrappedErr)
+		// o.Log.Error(wrappedErr)
 		return err
 	}
 	traceExporter := ptraceotlp.NewGRPCClient(conn)
@@ -86,6 +87,7 @@ spans end_time_unix_nano="2021-02-19 20:50:25.6896741 +0000 UTC",instrumentation
 */
 // https://opentelemetry.io/docs/collector/building/receiver/#representing-operations-with-spans
 func (o *OtelTrace) Write(metrics []telegraf.Metric) error {
+	spew.Dump(metrics)
 	// Invert this logic
 	// https://github.com/influxdata/influxdb-observability/blob/4be04f3bc56b026c388342a0365a09f9171999a2/otel2influx/traces.go#L78
 	traceBatch := map[string]ptrace.Traces{}
@@ -113,8 +115,11 @@ func (o *OtelTrace) Write(metrics []telegraf.Metric) error {
 				}
 			}
 			// TODO: Is this the right thing to do in terms of scope spans?
-			scopeSpans := traces.ResourceSpans().At(0).ScopeSpans().At(0)
-			newSpan := scopeSpans.Spans().AppendEmpty()
+			rSpan := traces.ResourceSpans().At(0)
+			if rSpan.ScopeSpans().Len() == 0 {
+				rSpan.ScopeSpans().AppendEmpty()
+			}
+			newSpan := rSpan.ScopeSpans().At(0).Spans().AppendEmpty()
 			span.CopyTo(newSpan)
 		case influxcommon.MeasurementSpanLinks:
 			// TODO
@@ -153,7 +158,7 @@ func (o *OtelTrace) Write(metrics []telegraf.Metric) error {
 			spanKey := spanLookupKey(traceID, spanID)
 			span, ok := spanBatch[spanKey]
 			if !ok {
-				o.Log.Debug("failed to find span with key %s", spanKey)
+				// o.Log.Debug("failed to find span with key %s", spanKey)
 				return nil
 			}
 			emptySpanEvent := span.Events().AppendEmpty()
@@ -164,10 +169,11 @@ func (o *OtelTrace) Write(metrics []telegraf.Metric) error {
 	}
 
 	for name, trace := range traceBatch {
-		o.Log.Debugf("sending trace: %s", name)
+		// o.Log.Debugf("sending trace: %s", name)
+		// TODO: Something is panicking here
 		_, err := o.Exporter.Export(context.TODO(), ptraceotlp.NewExportRequestFromTraces((trace)))
 		if err != nil {
-			o.Log.Errorf("failed to export traces %s: %s", name, err)
+			// o.Log.Errorf("failed to export traces %s: %s", name, err)
 			return err
 		}
 	}
