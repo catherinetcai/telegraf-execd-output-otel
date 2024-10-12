@@ -62,7 +62,7 @@ func (o *OtelTrace) Connect() error {
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
-		wrappedErr := fmt.Errorf("failed to create grpc client for %s - err: %w", o.ServiceAddress, err)
+		// wrappedErr := fmt.Errorf("failed to create grpc client for %s - err: %w", o.ServiceAddress, err)
 		// o.Log.Error(wrappedErr)
 		return err
 	}
@@ -168,7 +168,7 @@ func (o *OtelTrace) Write(metrics []telegraf.Metric) error {
 		// https://opentelemetry.io/docs/concepts/signals/traces/
 	}
 
-	for name, trace := range traceBatch {
+	for _, trace := range traceBatch {
 		// o.Log.Debugf("sending trace: %s", name)
 		// TODO: Something is panicking here
 		_, err := o.Exporter.Export(context.TODO(), ptraceotlp.NewExportRequestFromTraces((trace)))

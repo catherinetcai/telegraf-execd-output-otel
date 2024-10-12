@@ -2,6 +2,7 @@ package oteltrace_test
 
 import (
 	"context"
+	"net"
 	"sync"
 	"testing"
 
@@ -9,10 +10,9 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/resolver"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
 )
 
@@ -36,12 +36,19 @@ func TestOtelTrace(t *testing.T) {
 		s.Stop()
 		wg.Wait()
 	})
-	resolver.SetDefaultScheme("passthrough")
+	conn, err := grpc.NewClient("passthrough://bufnet",
+		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
+			return lis.Dial()
+		}),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	assert.NoError(t, err)
+	t.Cleanup(func() {
+		conn.Close()
+	})
 	ot := &oteltrace.OtelTrace{
-		// https://github.com/open-telemetry/opentelemetry-collector/blob/pdata/v1.13.0/pdata/ptrace/ptraceotlp/grpc_test.go#L41
-		ServiceAddress: "bufnet",
+		Exporter: ptraceotlp.NewGRPCClient(conn),
 	}
-	assert.NoError(t, ot.Connect())
 	defer ot.Close()
 	// Handle empty metrics
 	assert.NoError(t, ot.Write(testutil.MockMetrics()))
@@ -49,22 +56,4 @@ func TestOtelTrace(t *testing.T) {
 	assert.NoError(t, ot.Write([]telegraf.Metric{
 		generateTraceAsMetric(),
 	}))
-}
-
-// https://github.com/open-telemetry/opentelemetry-collector/blob/pdata/v1.13.0/pdata/ptrace/ptraceotlp/grpc_test.go#L93
-type fakeTracesServer struct {
-	ptraceotlp.UnimplementedGRPCServer
-	t   *testing.T
-	err error
-}
-
-func (f fakeTracesServer) Export(_ context.Context, request ptraceotlp.ExportRequest) (ptraceotlp.ExportResponse, error) {
-	assert.Equal(f.t, generateTracesRequest(), request)
-	return ptraceotlp.NewExportResponse(), f.err
-}
-
-func generateTracesRequest() ptraceotlp.ExportRequest {
-	td := ptrace.NewTraces()
-	td.ResourceSpans().AppendEmpty().ScopeSpans().AppendEmpty().Spans().AppendEmpty().SetName("test_span")
-	return ptraceotlp.NewExportRequestFromTraces(td)
 }
