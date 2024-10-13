@@ -48,6 +48,7 @@ func TestOtelTrace(t *testing.T) {
 	})
 	ot := &oteltrace.OtelTrace{
 		Exporter: ptraceotlp.NewGRPCClient(conn),
+		Log:      &testutil.Logger{},
 	}
 	defer ot.Close()
 	// Handle empty metrics

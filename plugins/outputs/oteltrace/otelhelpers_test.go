@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 
@@ -22,6 +23,8 @@ import (
 
 var _ sdktrace.IDGenerator = (*testIDGenerator)(nil)
 
+// This is lifted from:
+// https://github.com/open-telemetry/opentelemetry-go/blob/b3c313ff2fbd8ed4e8e8c9661c6932b4e2a6f2f1/sdk/trace/trace_test.go#L1863
 var testIDGen = testIDGenerator{}
 
 type testIDGenerator struct {
@@ -31,7 +34,10 @@ type testIDGenerator struct {
 
 func (gen *testIDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trace.SpanID) {
 	traceIDHex := fmt.Sprintf("%032x", gen.traceID)
-	traceID, _ := trace.TraceIDFromHex(traceIDHex)
+	traceID, err := trace.TraceIDFromHex(traceIDHex)
+	if err != nil {
+		panic(err)
+	}
 	gen.traceID++
 
 	spanID := gen.NewSpanID(ctx, traceID)
@@ -40,7 +46,10 @@ func (gen *testIDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trace.Sp
 
 func (gen *testIDGenerator) NewSpanID(ctx context.Context, traceID trace.TraceID) trace.SpanID {
 	spanIDHex := fmt.Sprintf("%016x", gen.spanID)
-	spanID, _ := trace.SpanIDFromHex(spanIDHex)
+	spanID, err := trace.SpanIDFromHex(spanIDHex)
+	if err != nil {
+		panic(err)
+	}
 	gen.spanID++
 	return spanID
 }
@@ -53,21 +62,25 @@ type fakeTracesServer struct {
 }
 
 func (f fakeTracesServer) Export(_ context.Context, request ptraceotlp.ExportRequest) (ptraceotlp.ExportResponse, error) {
+	fmt.Println("===EXPECTED===")
+	spew.Dump(generateTraces())
+	fmt.Println("===ACTUAL===")
+	spew.Dump(request)
 	assert.Equal(f.t, generateTracesRequest(), request)
 	return ptraceotlp.NewExportResponse(), f.err
 }
 
 func generateTraces() ptrace.Traces {
 	gen := &testIDGenerator{
-		traceID: 10,
-		spanID:  1,
+		traceID: 1,
+		spanID:  10,
 	}
 	traceID, spanID := gen.NewIDs(context.Background())
 	td := ptrace.NewTraces()
 	span := td.ResourceSpans().AppendEmpty().ScopeSpans().AppendEmpty().Spans().AppendEmpty()
 	span.SetName("fakespan")
-	ptraceID := pcommon.TraceID([16]byte(traceID))
-	pspanID := pcommon.SpanID([8]byte(spanID))
+	ptraceID := pcommon.TraceID(traceID)
+	pspanID := pcommon.SpanID(spanID)
 	span.SetTraceID(ptraceID)
 	span.SetSpanID(pspanID)
 	span.SetKind(ptrace.SpanKindServer)
@@ -81,14 +94,15 @@ func generateTracesRequest() ptraceotlp.ExportRequest {
 // TODO: Make this less awful?
 func generateTraceAsMetric() telegraf.Metric {
 	gen := &testIDGenerator{
-		traceID: 10,
-		spanID:  1,
+		traceID: 1,
+		spanID:  10,
 	}
 	traceID, spanID := gen.NewIDs(context.Background())
 	tags := map[string]string{
 		influxcommon.AttributeTraceID: traceID.String(),
 		influxcommon.AttributeSpanID:  spanID.String(),
 	}
+	fmt.Println("===METRIC TAGS===")
 	fields := map[string]interface{}{
 		influxcommon.AttributeDroppedAttributesCount: uint64(0),
 		influxcommon.AttributeDroppedEventsCount:     uint64(0),

@@ -5,7 +5,6 @@ import (
 	_ "embed"
 	"fmt"
 
-	"github.com/davecgh/go-spew/spew"
 	influxcommon "github.com/influxdata/influxdb-observability/common"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -57,13 +56,14 @@ func (o *OtelTrace) SampleConfig() string {
 
 func (o *OtelTrace) Connect() error {
 	var err error
+	o.Log.Debugf("connecting to trace exporter at: %s", o.ServiceAddress)
 	conn, err := grpc.NewClient(
 		o.ServiceAddress,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
-		// wrappedErr := fmt.Errorf("failed to create grpc client for %s - err: %w", o.ServiceAddress, err)
-		// o.Log.Error(wrappedErr)
+		wrappedErr := fmt.Errorf("failed to create grpc client for %s - err: %w", o.ServiceAddress, err)
+		o.Log.Error(wrappedErr)
 		return err
 	}
 	traceExporter := ptraceotlp.NewGRPCClient(conn)
@@ -87,13 +87,13 @@ spans end_time_unix_nano="2021-02-19 20:50:25.6896741 +0000 UTC",instrumentation
 */
 // https://opentelemetry.io/docs/collector/building/receiver/#representing-operations-with-spans
 func (o *OtelTrace) Write(metrics []telegraf.Metric) error {
-	spew.Dump(metrics)
 	// Invert this logic
 	// https://github.com/influxdata/influxdb-observability/blob/4be04f3bc56b026c388342a0365a09f9171999a2/otel2influx/traces.go#L78
 	traceBatch := map[string]ptrace.Traces{}
 	spanBatch := map[string]ptrace.Span{}
 
 	for _, metric := range metrics {
+		o.Log.Debugf("converting otel metric: %s", metric.Name())
 		// The metric names we care about are span, span-links, logs
 		switch name := metric.Name(); name {
 		case influxcommon.MeasurementSpans:
@@ -101,6 +101,7 @@ func (o *OtelTrace) Write(metrics []telegraf.Metric) error {
 			// The spanevent has the trace and span ID. Likely need some sort of map lookup
 			span, err := o.handleSpan(metric)
 			if err != nil {
+				o.Log.Error(err)
 				return err
 			}
 			traceKey := traceLookupKey(span.TraceID().String(), span.SpanID().String())
@@ -111,7 +112,9 @@ func (o *OtelTrace) Write(metrics []telegraf.Metric) error {
 				rs := traces.ResourceSpans().AppendEmpty()
 				// TODO: Only add the relevant resource attributes, not all of them from span
 				if err := rs.Resource().Attributes().FromRaw(span.Attributes().AsRaw()); err != nil {
-					return fmt.Errorf("unable to add attributes from span to resource %w", err)
+					wrappedErr := fmt.Errorf("unable to add attributes from span to resource %w", err)
+					o.Log.Error(wrappedErr)
+					return wrappedErr
 				}
 			}
 			// TODO: Is this the right thing to do in terms of scope spans?
@@ -125,6 +128,7 @@ func (o *OtelTrace) Write(metrics []telegraf.Metric) error {
 			// TODO
 			spanLink, err := o.handleSpanLink(metric)
 			if err != nil {
+				o.Log.Error(err)
 				return err
 			}
 			traceKey := traceLookupKey(spanLink.TraceID().String(), spanLink.SpanID().String())

@@ -14,17 +14,20 @@ import (
 // TODO: Returns the spanlink with the linked trace ID and span ID attached, but
 // this still has to be appended to the pre-existing span's links
 func (o *OtelTrace) handleSpanLink(metric telegraf.Metric) (ptrace.SpanLink, error) {
+	o.Log.Debugf("handling span link: %s", metric.Name())
 	spanLink := ptrace.NewSpanLink()
 	tags := metric.TagList()
 
 	for _, tag := range tags {
 		// https://github.com/influxdata/influxdb-observability/blob/main/otel2influx/traces.go#L267
 		if tag.Key == influxcommon.AttributeLinkedTraceID {
+			o.Log.Debugf("spanlink linked trace ID: %s", tag.Value)
 			pLinkedTraceID := pcommon.TraceID(([]byte(tag.Value)))
 			spanLink.SetTraceID(pLinkedTraceID)
 			// linkedTraceID = pLinkedTraceID.String()
 		}
 		if tag.Key == influxcommon.AttributeLinkedSpanID {
+			o.Log.Debugf("spanlink linked span ID: %s", tag.Value)
 			pLinkedSpanID := pcommon.SpanID([]byte(tag.Value))
 			spanLink.SetSpanID(pLinkedSpanID)
 			// linkedSpanID = pLinkedSpanID.String()

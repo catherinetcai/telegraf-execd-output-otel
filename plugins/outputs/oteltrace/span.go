@@ -10,24 +10,40 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	semconv "go.opentelemetry.io/collector/semconv/v1.16.0"
+	"go.opentelemetry.io/otel/trace"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
 func (o *OtelTrace) handleSpan(metric telegraf.Metric) (ptrace.Span, error) {
+	o.Log.Debugf("handling span: %s", metric.Name())
 	span := ptrace.NewSpan()
 
 	tags := metric.TagList()
 	for _, tag := range tags {
 		if tag.Key == influxcommon.AttributeTraceID {
-			traceID := pcommon.TraceID(([]byte(tag.Value)))
+			o.Log.Debugf("span trace ID string: %s", tag.Value)
+			// TODO: This is where the conversion goes wrong
+			decodedTraceID, err := trace.TraceIDFromHex(tag.Value)
+			if err != nil {
+				wrappedErr := fmt.Errorf("unable to convert trace ID hex string %s: %w", tag.Value, err)
+				o.Log.Error(wrappedErr)
+				return span, wrappedErr
+			}
+			traceID := pcommon.TraceID(decodedTraceID)
 			span.SetTraceID(traceID)
 		}
 		if tag.Key == influxcommon.AttributeSpanID {
-			// TODO: This panics in tests
-			spanID := pcommon.SpanID([]byte(tag.Value))
+			o.Log.Debugf("span span ID string: %s", tag.Value)
+			decodedSpanID, err := trace.SpanIDFromHex(tag.Value)
+			if err != nil {
+				wrappedErr := fmt.Errorf("unable to convert span ID hex string %s: %w", tag.Value, err)
+				o.Log.Error(wrappedErr)
+				return span, wrappedErr
+			}
+			spanID := pcommon.SpanID(decodedSpanID)
 			span.SetSpanID(spanID)
 		}
-		// TODO: There are other things that can be configured to be span dimensions, but whatever``
+		// TODO: There are other things that can be configured to be span dimensions
 	}
 
 	fields := metric.FieldList()
