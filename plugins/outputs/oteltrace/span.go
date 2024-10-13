@@ -49,7 +49,8 @@ func (o *OtelTrace) handleSpan(metric telegraf.Metric) (ptrace.Span, error) {
 	fields := metric.FieldList()
 	for _, field := range fields {
 		if field.Key == influxcommon.AttributeTraceState {
-			// TODO: convert interface into the correct shiz
+			o.Log.Debugf("trace state string: %+v", field.Value)
+			// TODO: convert interface into the correct state
 			traceStateRaw := field.Value
 			traceState, ok := traceStateRaw.(string)
 			if !ok {
@@ -75,12 +76,14 @@ func (o *OtelTrace) handleSpan(metric telegraf.Metric) (ptrace.Span, error) {
 			span.SetName(spanName)
 		}
 		if field.Key == influxcommon.AttributeSpanKind {
+			o.Log.Debugf("span kind: %+v", field.Value)
 			spanKindRaw := field.Value
 			spanKindStr, ok := field.Value.(string)
 			if !ok {
 				return span, fmt.Errorf("invalid type for span kind %v", spanKindRaw)
 			}
-			span.SetKind(ptrace.SpanKind(tracepb.Span_SpanKind_value[spanKindStr]))
+			sk := SpanKindFromString(spanKindStr)
+			span.SetKind(ptrace.SpanKind(int32(sk)))
 		}
 		if field.Key == influxcommon.AttributeEndTimeUnixNano {
 			endTimeRaw := field.Value
