@@ -8,7 +8,12 @@ tasks:
       - mockery
     cmds:
       - go install github.com/vektra/mockery/v2@v2.45.0
+      - go install github.com/open-telemetry/opentelemetry-collector-contrib/cmd/telemetrygen@latest
 
   mocks:
     cmds:
       - mockery
+
+  tracegen:
+    cmds:
+      - telemetrygen traces --otlp-insecure --otlp-endpoint localhost:44317

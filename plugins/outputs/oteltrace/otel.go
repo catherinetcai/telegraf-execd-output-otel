@@ -34,11 +34,8 @@ type OtelTrace struct {
 	ServiceAddress string `toml:"service_address"`
 	Exporter       ptraceotlp.GRPCClient
 
-	// Private store to allow for teardown
 	clientConn *grpc.ClientConn
 
-	// TODO: Verify if it works
-	// https://github.com/influxdata/telegraf/blob/master/docs/developers/LOGGING.md#plugin-logging
 	Log telegraf.Logger `toml:"-"`
 }
 
@@ -117,7 +114,6 @@ func (o *OtelTrace) Write(metrics []telegraf.Metric) error {
 					return wrappedErr
 				}
 			}
-			// TODO: Is this the right thing to do in terms of scope spans?
 			rSpan := traces.ResourceSpans().At(0)
 			if rSpan.ScopeSpans().Len() == 0 {
 				rSpan.ScopeSpans().AppendEmpty()
@@ -125,7 +121,6 @@ func (o *OtelTrace) Write(metrics []telegraf.Metric) error {
 			newSpan := rSpan.ScopeSpans().At(0).Spans().AppendEmpty()
 			span.CopyTo(newSpan)
 		case influxcommon.MeasurementSpanLinks:
-			// TODO
 			spanLink, err := o.handleSpanLink(metric)
 			if err != nil {
 				o.Log.Error(err)
@@ -137,7 +132,6 @@ func (o *OtelTrace) Write(metrics []telegraf.Metric) error {
 				traces = ptrace.NewTraces()
 				traceBatch[traceKey] = traces
 				rs := traces.ResourceSpans().AppendEmpty()
-				// TODO
 				if err := rs.Resource().Attributes().FromRaw(spanLink.Attributes().AsRaw()); err != nil {
 					return fmt.Errorf("unable to add attributes from spanlink to resource %w", err)
 				}
@@ -162,7 +156,7 @@ func (o *OtelTrace) Write(metrics []telegraf.Metric) error {
 			spanKey := spanLookupKey(traceID, spanID)
 			span, ok := spanBatch[spanKey]
 			if !ok {
-				// o.Log.Debug("failed to find span with key %s", spanKey)
+				o.Log.Debug("failed to find span with key %s", spanKey)
 				return nil
 			}
 			emptySpanEvent := span.Events().AppendEmpty()
@@ -173,11 +167,10 @@ func (o *OtelTrace) Write(metrics []telegraf.Metric) error {
 	}
 
 	for _, trace := range traceBatch {
-		// o.Log.Debugf("sending trace: %s", name)
-		// TODO: Something is panicking here
+		o.Log.Debugf("sending trace: %s")
 		_, err := o.Exporter.Export(context.TODO(), ptraceotlp.NewExportRequestFromTraces((trace)))
 		if err != nil {
-			// o.Log.Errorf("failed to export traces %s: %s", name, err)
+			o.Log.Errorf("failed to export traces %s: %s", trace, err)
 			return err
 		}
 	}

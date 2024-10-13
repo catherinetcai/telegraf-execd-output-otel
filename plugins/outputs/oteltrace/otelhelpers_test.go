@@ -108,7 +108,7 @@ func generateTraceAsMetric() telegraf.Metric {
 		influxcommon.AttributeDroppedEventsCount:     uint64(0),
 		influxcommon.AttributeSpanKind:               ptrace.SpanKindServer.String(),
 		influxcommon.AttributeSpanName:               "fakespan",
-		// semconv.OtelStatusCode:                       codes.OK.String(),
+		semconv.OtelStatusCode:                       codes.OK.String(),
 	}
 	mtrace := metric.New(
 		influxcommon.MeasurementSpans,
