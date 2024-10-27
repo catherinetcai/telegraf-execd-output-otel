@@ -84,6 +84,10 @@ spans end_time_unix_nano="2021-02-19 20:50:25.6896741 +0000 UTC",instrumentation
 */
 // https://opentelemetry.io/docs/collector/building/receiver/#representing-operations-with-spans
 func (o *OtelTrace) Write(metrics []telegraf.Metric) error {
+	if len(metrics) == 0 {
+		return nil
+	}
+
 	// Invert this logic
 	// https://github.com/influxdata/influxdb-observability/blob/4be04f3bc56b026c388342a0365a09f9171999a2/otel2influx/traces.go#L78
 	traceBatch := map[string]ptrace.Traces{}
@@ -167,7 +171,7 @@ func (o *OtelTrace) Write(metrics []telegraf.Metric) error {
 	}
 
 	for traceName, trace := range traceBatch {
-		o.Log.Debugf("sending trace: %s", traceName)
+		o.Log.Debugf("sending trace: %s:\n%+v", traceName, trace)
 		_, err := o.Exporter.Export(context.TODO(), ptraceotlp.NewExportRequestFromTraces((trace)))
 		if err != nil {
 			o.Log.Errorf("failed to export traces %s: %s", trace, err)

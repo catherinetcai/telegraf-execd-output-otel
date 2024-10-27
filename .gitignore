@@ -1,1 +1,3 @@
+# Ignore artifacts generated for integration-tests
 integration-test/tempo/data/**
+integration-test/telegraf/etc/telegraf-execd-otel
