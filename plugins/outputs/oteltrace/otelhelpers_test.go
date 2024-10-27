@@ -11,6 +11,8 @@ import (
 	"github.com/influxdata/telegraf/metric"
 
 	"github.com/stretchr/testify/assert"
+	semconv "go.opentelemetry.io/collector/semconv/v1.16.0"
+	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 
@@ -108,7 +110,7 @@ func generateTraceAsMetric() telegraf.Metric {
 		influxcommon.AttributeDroppedEventsCount:     uint64(0),
 		influxcommon.AttributeSpanKind:               ptrace.SpanKindServer.String(),
 		influxcommon.AttributeSpanName:               "fakespan",
-		semconv.OtelStatusCode:                       codes.OK.String(),
+		semconv.OtelStatusCode:                       codes.Ok.String(),
 	}
 	mtrace := metric.New(
 		influxcommon.MeasurementSpans,

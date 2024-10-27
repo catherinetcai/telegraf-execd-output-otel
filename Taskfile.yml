@@ -17,3 +17,7 @@ tasks:
   tracegen:
     cmds:
       - telemetrygen traces --otlp-insecure --otlp-endpoint localhost:44317
+
+  build:
+    cmds:
+      - go build ./...
