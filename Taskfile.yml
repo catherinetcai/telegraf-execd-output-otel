@@ -34,7 +34,7 @@ tasks:
   integration:stop:
     dir: integration-test
     cmds:
-      - docker compose down
+      - docker compose down telegraf
 
   integration:logs:
     dir: integration-test

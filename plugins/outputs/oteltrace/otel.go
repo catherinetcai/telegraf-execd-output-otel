@@ -166,8 +166,8 @@ func (o *OtelTrace) Write(metrics []telegraf.Metric) error {
 		// https://opentelemetry.io/docs/concepts/signals/traces/
 	}
 
-	for _, trace := range traceBatch {
-		o.Log.Debugf("sending trace: %s")
+	for traceName, trace := range traceBatch {
+		o.Log.Debugf("sending trace: %s", traceName)
 		_, err := o.Exporter.Export(context.TODO(), ptraceotlp.NewExportRequestFromTraces((trace)))
 		if err != nil {
 			o.Log.Errorf("failed to export traces %s: %s", trace, err)
