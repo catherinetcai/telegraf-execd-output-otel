@@ -28,7 +28,7 @@ func (o *OtelTrace) handleSpanEvent(metric telegraf.Metric) (spanEvent ptrace.Sp
 				return spanEvent, "", "", fmt.Errorf("invalid type for attributes %v", attributesRaw)
 			}
 			attributesField := make(map[string]any)
-			if err := json.Unmarshal([]byte(attributesRawStr), attributesField); err != nil {
+			if err := json.Unmarshal([]byte(attributesRawStr), &attributesField); err != nil {
 				return spanEvent, "", "", fmt.Errorf("failed to unmarshal attributes to map %w", err)
 			}
 			spanEvent.Attributes().FromRaw(attributesField)

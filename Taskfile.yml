@@ -21,3 +21,22 @@ tasks:
   build:
     cmds:
       - go build ./...
+
+  integration:build:
+    cmds:
+      - GOOS=linux GOARCH=amd64 go build -o integration-test/telegraf/etc/ ./...
+
+  integration:run:
+    dir: integration-test
+    cmds:
+      - docker compose up -d
+
+  integration:stop:
+    dir: integration-test
+    cmds:
+      - docker compose down
+
+  integration:logs:
+    dir: integration-test
+    cmds:
+      - docker compose logs -f telegraf

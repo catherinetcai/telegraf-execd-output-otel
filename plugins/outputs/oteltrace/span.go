@@ -127,7 +127,7 @@ func (o *OtelTrace) handleSpan(metric telegraf.Metric) (ptrace.Span, error) {
 				return span, fmt.Errorf("invalid type for attributes %v", attributesRaw)
 			}
 			attributesField := make(map[string]any)
-			if err := json.Unmarshal([]byte(attributesRawStr), attributesField); err != nil {
+			if err := json.Unmarshal([]byte(attributesRawStr), &attributesField); err != nil {
 				return span, fmt.Errorf("failed to unmarshal attributes to map %w", err)
 			}
 			span.Attributes().FromRaw(attributesField)
