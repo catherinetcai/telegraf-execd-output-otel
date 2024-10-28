@@ -64,12 +64,14 @@ func (o *OtelTrace) Connect() error {
 		return err
 	}
 	traceExporter := ptraceotlp.NewGRPCClient(conn)
+	o.clientConn = conn
 	o.Exporter = traceExporter
 	return nil
 }
 
 func (o *OtelTrace) Close() error {
 	if o.clientConn != nil {
+		o.Log.Debug("closing Otel client connection")
 		return o.clientConn.Close()
 	}
 	return nil
@@ -171,7 +173,7 @@ func (o *OtelTrace) Write(metrics []telegraf.Metric) error {
 	}
 
 	for traceName, trace := range traceBatch {
-		o.Log.Debugf("sending trace: %s:\n%+v", traceName, trace)
+		o.Log.Debugf("sending trace: %s:\n%#v", traceName, trace)
 		_, err := o.Exporter.Export(context.TODO(), ptraceotlp.NewExportRequestFromTraces((trace)))
 		if err != nil {
 			o.Log.Errorf("failed to export traces %s: %s", trace, err)

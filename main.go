@@ -27,6 +27,7 @@ type cliArgs struct {
 
 func main() {
 	flag.StringVar(&args.configFile, "config", "", "Path to config file for this plugin")
+	// TODO: Have otlpexporterendpoint override what's set in the config
 	flag.StringVar(&args.otlpExporterEndpoint, "endpoint", "0.0.0.0:4317", "OTLP exporter endpoint to send metrics to.")
 	flag.DurationVar(&args.pollInterval, "poll_interval", 1*time.Second, "How often to send metrics.")
 	flag.BoolVar(&args.pollIntervalDisabled, "poll_interval_disabled", false, "Set to true to disable polling.")

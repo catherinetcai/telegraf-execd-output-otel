@@ -23,20 +23,28 @@ tasks:
       - go build ./...
 
   integration:build:
+    aliases:
+      - i:build
     cmds:
       - GOOS=linux GOARCH=amd64 go build -o integration-test/telegraf/etc/ ./...
 
   integration:run:
     dir: integration-test
+    aliases:
+      - i:run
     cmds:
       - docker compose up -d
 
   integration:stop:
     dir: integration-test
+    aliases:
+      - i:stop
     cmds:
-      - docker compose down telegraf
+      - docker compose down {{.CLI_ARGS}}
 
   integration:logs:
     dir: integration-test
+    aliases:
+      - i:logs
     cmds:
-      - docker compose logs -f telegraf
+      - docker compose logs -f {{.CLI_ARGS}}

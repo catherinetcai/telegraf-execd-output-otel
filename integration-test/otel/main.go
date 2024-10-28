@@ -19,7 +19,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-var exporterGRPCServer = "localhost:44317"
+var exporterGRPCServer = "localhost:14317"
 
 func main() {
 	conn, err := grpc.NewClient(
