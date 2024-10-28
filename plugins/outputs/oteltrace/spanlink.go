@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/davecgh/go-spew/spew"
 	influxcommon "github.com/influxdata/influxdb-observability/common"
 	"github.com/influxdata/telegraf"
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -37,7 +36,6 @@ func (o *OtelTrace) handleSpanLink(metric telegraf.Metric) (ptrace.SpanLink, err
 	fields := metric.FieldList()
 	for _, field := range fields {
 		if field.Key == influxcommon.AttributeTraceState {
-			// TODO: convert interface into the correct shiz
 			traceStateRaw := field.Value
 			traceState, ok := traceStateRaw.(string)
 			if !ok {
@@ -59,7 +57,6 @@ func (o *OtelTrace) handleSpanLink(metric telegraf.Metric) (ptrace.SpanLink, err
 		}
 		if field.Key == influxcommon.AttributeDroppedAttributesCount {
 			droppedAttrCountRaw := field.Value
-			spew.Dump(droppedAttrCountRaw)
 			droppedAttrCount, ok := droppedAttrCountRaw.(uint64)
 			if !ok {
 				return spanLink, fmt.Errorf("invalid type for dropped attributes count %v", droppedAttrCountRaw)

@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 
@@ -64,10 +63,6 @@ type fakeTracesServer struct {
 }
 
 func (f fakeTracesServer) Export(_ context.Context, request ptraceotlp.ExportRequest) (ptraceotlp.ExportResponse, error) {
-	fmt.Println("===EXPECTED===")
-	spew.Dump(generateTraces())
-	fmt.Println("===ACTUAL===")
-	spew.Dump(request)
 	assert.Equal(f.t, generateTracesRequest(), request)
 	return ptraceotlp.NewExportResponse(), f.err
 }
