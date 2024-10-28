@@ -59,11 +59,14 @@ func (o *OtelTrace) handleSpan(metric telegraf.Metric) (ptrace.Span, error) {
 			span.TraceState().FromRaw(traceState)
 		}
 		if field.Key == influxcommon.AttributeParentSpanID {
-			parentSpanIDRaw := field.Value
-			parentSpanID, ok := parentSpanIDRaw.([]byte)
-			if !ok {
-				return span, fmt.Errorf("invalid type for parent_span_id %v", parentSpanIDRaw)
+			o.Log.Debugf("span parent span ID string: %s", field.Value)
+			decodedParentSpanID, err := trace.SpanIDFromHex(field.Value)
+			if err != nil {
+				wrappedErr := fmt.Errorf("unable to convert parent span ID hex string %s: %w", field.Value, err)
+				o.Log.Error(wrappedErr)
+				return span, wrappedErr
 			}
+			parentSpanID := pcommon.SpanID(decodedParentSpanID)
 			pSid := pcommon.SpanID(parentSpanID)
 			span.SetParentSpanID(pSid)
 		}
