@@ -1,0 +1,4 @@
+# Ignore artifacts generated for integration-tests
+integration-test/grafana/**
+integration-test/tempo/data/**
+integration-test/telegraf/etc/telegraf-execd-otel
