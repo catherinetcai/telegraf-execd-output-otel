@@ -44,6 +44,7 @@ services:
     image: grafana/grafana:10.4.2
     volumes:
       - ./grafana/var/lib/grafana:/var/lib/grafana
+      - ./grafana/etc/grafana/provisioning:/etc/grafana/provisioning
     environment:
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
@@ -51,12 +52,3 @@ services:
       - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor traceQLStreaming metricsSummary
     ports:
       - "3000:3000"
-
-        # agent:
-        #   image: grafana/alloy
-        #   volumes:
-        #     - ./alloy/etc/config.alloy:/etc/alloy/config.alloy:ro
-        #     - ./alloy/storage:/var/lib/alloy/data
-        #   ports:
-        #     - '12345:12345'
-        #   command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
