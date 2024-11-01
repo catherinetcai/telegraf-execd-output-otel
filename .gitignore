@@ -2,3 +2,5 @@
 integration-test/grafana/**
 integration-test/tempo/data/**
 integration-test/telegraf/etc/telegraf-execd-otel
+
+dist/
