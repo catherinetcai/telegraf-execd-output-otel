@@ -4,15 +4,8 @@ version: "3"
 
 tasks:
   deps:
-    status:
-      - mockery
     cmds:
-      - go install github.com/vektra/mockery/v2@v2.45.0
       - go install github.com/open-telemetry/opentelemetry-collector-contrib/cmd/telemetrygen@latest
-
-  mocks:
-    cmds:
-      - mockery
 
   tracegen:
     cmds:

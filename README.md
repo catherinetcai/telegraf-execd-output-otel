@@ -4,7 +4,7 @@ This is meant to do the inverse of what the
 [otel2influx package](https://github.com/influxdata/influxdb-observability/blob/main/otel2influx/traces.go#L130)
 does, except as a Telegraf output execd plugin.
 
-fhis is still only in a WIP state. OTLP traces do export from Telegraf to a gRPC OTLP collector endpoint, but this hasn't been strenuously tested.
+This plugin is still only in a WIP state. OTLP traces do export successfully from Telegraf to a gRPC OTLP collector endpoint, but this hasn't been strenuously tested.
 
 ## Usage
 
