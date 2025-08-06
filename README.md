@@ -1,4 +1,4 @@
-# Telegraf Execd Otel Trace Plugin (WIP)
+# Telegraf Execd Otel Trace Plugin (Super Duper Alpha)
 
 This is meant to do the inverse of what the
 [otel2influx package](https://github.com/influxdata/influxdb-observability/blob/main/otel2influx/traces.go#L130)

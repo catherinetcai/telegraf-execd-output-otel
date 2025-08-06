@@ -1,8 +1,9 @@
 module github.com/catherinetcai/telegraf-execd-otel
 
-go 1.22.3
+go 1.24
 
 require (
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/influxdata/influxdb-observability/common v0.5.8
 	github.com/influxdata/telegraf v1.30.2
 	github.com/spf13/pflag v1.0.5
@@ -35,7 +36,6 @@ require (
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/coreos/go-semver v0.3.1 // indirect
 	github.com/cpuguy83/dockercfg v0.3.1 // indirect
-	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/distribution/reference v0.5.0 // indirect
 	github.com/docker/docker v25.0.6+incompatible // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
